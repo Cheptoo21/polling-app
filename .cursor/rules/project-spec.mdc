@@ -1,0 +1,146 @@
+---
+description: Polling App - Next.js 14 with Supabase, shadcn/ui, and QR code sharing
+globs: ["**/*.{ts,tsx,js,jsx}"]
+alwaysApply: true
+---
+
+# Polling App - Project Rules
+
+za## 🎯 Core Architecture Rules
+
+### 1. Next.js App Router Pattern
+
+- **ALWAYS** use Server Components by default for data fetching and rendering
+- **ONLY** add `'use client'` when you need interactivity (hooks, event handlers, state)
+- **NEVER** use `useEffect` + `useState` for data fetching in page components
+- **ALWAYS** fetch data directly in Server Components using Supabase client
+
+```tsx
+// ✅ CORRECT - Server Component
+export default async function PollsPage() {
+  const polls = await supabase.from("polls").select("*");
+  return <PollsList polls={polls} />;
+}
+
+// ❌ WRONG - Client-side data fetching
+export default function PollsPage() {
+  const [polls, setPolls] = useState([]);
+  useEffect(() => {
+    /* fetch data */
+  }, []);
+  return <PollsList polls={polls} />;
+}
+```
+
+### 2. Server Actions for Mutations
+
+- **ALWAYS** use Server Actions for form submissions and data mutations
+- **NEVER** create API routes for form handling
+- **ALWAYS** place Server Actions in `/lib/actions/` directory
+- **ALWAYS** use proper error handling with try/catch
+
+```tsx
+// ✅ CORRECT - Server Action
+// lib/actions/polls.ts
+"use server";
+export async function createPoll(formData: FormData) {
+  try {
+    const { data, error } = await supabase
+      .from("polls")
+      .insert({ title: formData.get("title") });
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to create poll" };
+  }
+}
+```
+
+### 3. Folder Structure & Naming
+
+- **ALWAYS** follow this exact structure:
+  ```
+  /app/polls/[id]/page.tsx     # Dynamic poll pages
+  /app/polls/create/page.tsx   # Create poll page
+  /components/polls/           # Poll-specific components
+  /components/auth/            # Authentication components
+  /components/shared/          # Reusable shared components
+  /lib/actions/               # Server Actions
+  /lib/supabase.ts           # Supabase client config
+  ```
+- **ALWAYS** use PascalCase for component files: `CreatePollForm.tsx`
+- **ALWAYS** use camelCase for utility functions: `submitVote.ts`
+
+### 4. Supabase Integration Rules
+
+- **ALWAYS** use environment variables for Supabase credentials
+- **NEVER** hardcode Supabase URLs or keys
+- **ALWAYS** create separate client instances for server vs client
+- **ALWAYS** handle Supabase errors gracefully
+
+```tsx
+// ✅ CORRECT - Environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// ❌ WRONG - Hardcoded values
+const supabaseUrl = "https://xyz.supabase.co";
+```
+
+### 5. shadcn/ui Component Usage
+
+- **ALWAYS** use shadcn/ui components from `/components/ui/`
+- **ALWAYS** use the `cn()` utility for conditional classes
+- **ALWAYS** extend shadcn components with proper TypeScript interfaces
+- **NEVER** create custom UI components that duplicate shadcn functionality
+
+```tsx
+// ✅ CORRECT - Using shadcn/ui with cn utility
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+<Button className={cn("w-full", isActive && "bg-primary")} variant="outline">
+  Create Poll
+</Button>;
+```
+
+## 🔧 Development Patterns
+
+### Form Handling
+
+- **ALWAYS** use native HTML forms with Server Actions
+- **ALWAYS** include proper form validation
+- **ALWAYS** show loading states during submission
+
+### Error Handling
+
+- **ALWAYS** use try/catch in Server Actions
+- **ALWAYS** create error.tsx files for route segments
+- **ALWAYS** provide meaningful error messages to users
+
+### QR Code Integration
+
+- **ALWAYS** use `qrcode.react` for QR code generation
+- **ALWAYS** generate QR codes on the client side
+- **ALWAYS** include proper error handling for QR generation
+
+## 🚫 Anti-Patterns to Avoid
+
+1. **NEVER** use `fetch()` in Client Components for data fetching
+2. **NEVER** create API routes for simple CRUD operations
+3. **NEVER** hardcode any secrets or API keys
+4. **NEVER** use `useEffect` for initial data loading in pages
+5. **NEVER** create custom UI components that duplicate shadcn/ui functionality
+
+## ✅ Pre-commit Checklist
+
+Before submitting any code, verify:
+
+- [ ] Uses Server Components for data fetching
+- [ ] Uses Server Actions for mutations
+- [ ] Follows proper folder structure
+- [ ] Uses shadcn/ui components appropriately
+- [ ] Handles Supabase errors gracefully
+- [ ] No hardcoded secrets or URLs
+- [ ] Proper TypeScript types throughout
+- [ ] Uses `cn()` utility for conditional classes
